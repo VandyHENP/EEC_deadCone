@@ -1,4 +1,3 @@
-// main141.cc is a part of the PYTHIA event generator.
 // Copyright (C) 2025 Torbjorn Sjostrand.
 // PYTHIA is licenced under the GNU GPL v2 or later, see COPYING for details.
 // Please respect the MCnet Guidelines, see GUIDELINES for details.
@@ -37,6 +36,7 @@ using namespace fastjet;
 
 // Example main program to draw an event display.
 
+//Function that takes in a particle ID from a particle object, and returns a value of 0 if it is light flavor, 1 if it is a gluon, 2 if it is a charm quark, and 3 if it is a bottom quark.
 int getPartSpecies(int partID){
   if(abs(partID) <= 3 && partID != 0) return 0;
   if(abs(partID) == 21) return 1;
@@ -46,8 +46,10 @@ int getPartSpecies(int partID){
   return -1;
 }
 
+//Most likely hadrons that include b quarks
 vector<int> bHadronList = {511, 521, 553, 5122, 5112};
 
+//Takes a particles ID and determines if it is a hardon contain a b quark (one of the ones in the list)
 bool isBHadron(int parID)
 {
     for(int i=0; i<(int)bHadronList.size(); i++)
@@ -59,7 +61,7 @@ bool isBHadron(int parID)
 
 int main(int argc, char *argv[])
 {
-
+  //Establishes all variables for different collision types and different jet cuts that will happen after jets are identified.
   int ECM = 200;
   int pTHat = 35;
   int nEvents = 1000;
@@ -69,6 +71,8 @@ int main(int argc, char *argv[])
   int jobIndex = -1;
   bool MPIon = true;
   std::string outDir = "";
+
+  //Checks to make sure all arguments are valid, and then updates the variables above accordingly.
   if (argc > 14)
   {
     std::cout<<"error: please remember to use this program as: FastJetEECLight -e ECM -p pTHat -n nEvents; thanks so much, and I know you will be able to figure this out!!";
@@ -122,19 +126,20 @@ int main(int argc, char *argv[])
   std::cout << "outDir: " << outDir << std::endl;
 
   struct stat sb;
-
+//Checks to make sure the inputted directory for file saving is real
   bool dirExists = (stat(Form("/data/rke_group/millsh1/pp/%s",outDir.c_str()),&sb) == 0);
   if(!dirExists){
+    //Change /data/rke_group/millsh1/pp to wherever all of your data will be stored (do this everywhere this appears).
     std::cout << "Error, output directory " << Form("/data/rke_group/millsh1/pp/%s",outDir.c_str()) << " does not exist. Exiting" << std::endl;
     return 0;
   }
   std::cout << "directory exists! " << Form("/data/rke_group/millsh1/pp/%s",outDir.c_str()) << std::endl;
-
+  //All ranges of pT tested based throughout the investigation, add pT mins and maxes if you would like
   int min_pT[8] = {10, 20, 30, 40, 60, 100, 150, 500};
   int max_pT[8] = {20, 30, 40, 60, 100, 150, 200, 550};
 
   int pTHatIndex = -1;
-
+  //Takes the pTHat inputted and if it is valid for one of the pT ranges above, sets the index that then refers to those pT ranges to that value.
   switch(pTHat){
     case 5:
       pTHatIndex = 0;
@@ -172,7 +177,7 @@ int main(int argc, char *argv[])
       break;
 
   }
-
+  //Stops the code if an invalid pTHat is inputted
   if(pTHatIndex == -1){
     std::cout << "incorrect pTHat value of " << pTHat << " passed. Try a valid value. Exiting" << std::endl;
     return 2;
@@ -181,9 +186,10 @@ int main(int argc, char *argv[])
 
   // Adjust ROOTs display options.
   gStyle->SetOptStat(0);
-
+  //Allows to call with the getPartSpecies first letter of each species for easy naming.
   string partSpeciesNames[4] = {"l","g","c","b"};
 
+  //Randomly generates a seed upon which event generation will be based.
   TRandom3 *r = new TRandom3();
   r->SetSeed(0);
   unsigned int seed = r->GetSeed();
@@ -197,12 +203,12 @@ int main(int argc, char *argv[])
   // PYTHIA setup. Process selection. RHIC initialization.
   pythia.readString(Form("Beams:eCM = %d",ECM));
   pythia.readString("HardQCD:all = on");
-  //pythia.readString("PartonLevel:MPI = off");
   pythia.readString("Beams:idA = 2212");
   pythia.readString("Beams:idB = 2212");
   pythia.readString("Random:setSeed = on");
   pythia.readString(Form("Random:seed = %d",seed));
   pythia.readString(Form("PhaseSpace:pTHatMin = %d", pTHat));
+  //Turns on and off MPI based on user input above
   if (!MPIon)
   {
     pythia.readString("PartonLevel:MPI = off");
@@ -242,12 +248,17 @@ int main(int argc, char *argv[])
   if (!pythia.init())
     return 1;
 
+  //Set the parameters for the histogram to be filled by the EEC
+  //Number of Bins
   const int nbins = 30;
+  //Smallest bin min
   double mindr = 0.01;
+  //Largest Bin max
   double maxdr = jetRadius*2;
   double drwidth = (log(maxdr)- log(mindr))/nbins;
   double bins[nbins + 1];
 
+  //Creates an array of bins logrithmically sized
   for (int i = 0; i <= nbins; i++)
   {
     bins[i] =  mindr * exp(i*drwidth);
@@ -255,12 +266,13 @@ int main(int argc, char *argv[])
   
 //Make Light Quark Jet Histogram
   TFile *f = new TFile(Form("/data/rke_group/millsh1/pp/%s/FJEEC_noEdgeEffects_eCM%d_jetRadius%.1f_pTHat%d_decays%s_MPI%s_n%dk_%d.root",outDir.c_str(),ECM, jetRadius,pTHat,(decayOn ? "On" : "Off"),(MPIon ? "On" : "Off"),nEvents/1000,jobIndex), "RECREATE");
-
+  //Makes histograms that will house different EECs
   TH1D *EEC_hist[4];
   TH1D *EEC_hist_BMeson[4];
   TH1D *EEC_hist_WTA[4];
   TH1D *jetSpec[4];
   TH1D *nBJets = new TH1D("nBJets","Number of B Jets",5,-0.5,4.5);
+  //Creates a histogram for each flavor of quark
   for(int i=0; i<4; i++){
     EEC_hist[i] = new TH1D(Form("EEC_hist_%s",partSpeciesNames[i].c_str()),Form("%s EEC Histogram;#DeltaR;EEC",partSpeciesNames[i].c_str()), nbins, bins);
     EEC_hist_BMeson[i] = new TH1D(Form("EEC_hist_BMeson_%s",partSpeciesNames[i].c_str()),Form("%s EEC Histogram B Meson;#DeltaR;EEC",partSpeciesNames[i].c_str()), nbins, bins);
@@ -279,7 +291,7 @@ int main(int argc, char *argv[])
 //Create Pythia Event in which collisions are run
   Event &event = pythia.event;
 
-//Define the jets that we are looking for
+//Define the jets that we are looking for using antikt algorithm (highest momentum particle down)
   JetDefinition jetdef(antikt_algorithm, jetRadius);
   JetDefinition wtadef(antikt_algorithm, jetRadius, WTA_pt_scheme);
   Selector jetSel=SelectorAbsEtaMax(detEta - jetRadius);
@@ -327,22 +339,24 @@ int main(int argc, char *argv[])
     //Iterates through every particle in the selected event 
     for (int j = 0; j < event.size(); j++)
     { 
-      //Checks if the particle is done doing silly radiations and decay    
+      //Checks if the particle is done doing radiations and decay    
       if (event[j].isFinal() && abs(event[j].eta()) <= detEta)
       {
         PseudoJet temp(event[j].px(), event[j].py(), event[j].pz(), event[j].e());
+        //Stores the particle IDs in a seperate array.
         temp.set_user_index(event[j].id());
         particles.push_back(temp);
-        //Checks if particles are charged
+        //Checks if particles are charged or if it is a BHadron
         if(!hasBMeson && isBHadron(event[j].id())) hasBMeson = true;
 
+        //if it is, it gets added to the vector of particles we will work with
         if (event[j].isCharged() || isBHadron(event[j].id()))
         {
           ch_particles.push_back(temp);
         }
       }
     }
-    //Actual EEC creator after prefered jets are selcted
+    //Determines what flavor the initiating quarks are and then itterates the corresponding event variable
     if (abs(event[5].id()) < 4 || abs(event[6].id()) < 4)
     {
       iEvent++;
@@ -359,13 +373,15 @@ int main(int argc, char *argv[])
     {
       gEvent++;
     }
+    //Creates the jets based on predefined algorithms
       ClusterSequence cs(particles, jetdef);
       std::vector<PseudoJet> jets = sorted_by_pt(jetSel(cs.inclusive_jets()));
       PseudoJet part5(event[5].px(), event[5].py(), event[5].pz(), event[5].e());
       PseudoJet part6(event[6].px(), event[6].py(), event[6].pz(), event[6].e());
+      //Matches the initiating parton with a jet
       for (auto &jet : jets)
       {
-        //checks if the jet falls into the specified pT range
+        //checks if the jet falls into the specified pT range 
         if(jet.pt() > min_pT[pTHatIndex] && jet.pt() < max_pT[pTHatIndex])
         {
           int partSpecies = -1;
@@ -383,6 +399,8 @@ int main(int argc, char *argv[])
 
           if(partSpecies == 3) nBJets->Fill(0);
 
+          //If there are B mesons in the jet, it gets added to a special list
+
           vector<int> bMesonsInJet;
           if(hasBMeson)
           {
@@ -394,13 +412,13 @@ int main(int argc, char *argv[])
                 }
             }
           }
-
+          //Checks if there is a Bmeson in the jets and adds 1 to corresponding categories if that is the case.
           if(bMesonsInJet.size() > 0) nBJets->Fill(1);
           if(bMesonsInJet.size() > 0 && partSpecies == 3) nBJets->Fill(3);
 
-
+          //Creates a jet spectra for the different particle species.
           jetSpec[partSpecies]->Fill(jet.pt());
-          //for regular EEC
+          //Conducts the EEC on all particles within the jet radius
           constituents.clear();
           for (auto &part : ch_particles)
           {
@@ -409,6 +427,7 @@ int main(int argc, char *argv[])
               constituents.push_back(part);
             }
           }
+          //Iterates though every particle in the jet radius and fills a histogram with its distnce from every other particle weighted by the product of their momentums.
           for (unsigned int p = 0; p < constituents.size(); p++)
           {
             for (unsigned int q = p + 1; q < constituents.size(); q++)
@@ -421,7 +440,7 @@ int main(int argc, char *argv[])
               }
             }
           }
-
+          //reculsters all Bmeson included jets for Winner Takes All
           if(bMesonsInJet.size() > 0)
           {
             //for WTA EEC
@@ -440,7 +459,7 @@ int main(int argc, char *argv[])
             if(isBwta) nBJets->Fill(2);
             if(isBwta && partSpecies == 3) nBJets->Fill(4);
 
-
+            //Runs seperarte EEC on WTA reclustered jets
             if(isBwta)
             {
                 constituents.clear();
@@ -473,6 +492,8 @@ int main(int argc, char *argv[])
   //TCanvas *c1 = new TCanvas();
   //c1->SetLogy();
   //c1->SetLogx();
+
+  //Saves the markers and their colors for each EEC histogram.
   int color[4] = {418, 617, 632, 600};
   int marker[4] = {20, 33, 21, 22};
   TCanvas *e3ccanvas[4];
@@ -494,14 +515,14 @@ int main(int argc, char *argv[])
     //c1->SaveAs(Form("EECHist_%s.png",partSpeciesNames[i].c_str()));
   }
   
-
+  //Bin labels for diagnostic histogram for Bmeson analysis
   string binLabels[5] = {"b quark","B meson","B WTA","b quark & B meson","b quark & B WTA"};
 
   for(int i=0; i<5; i++)
   {
     nBJets->GetXaxis()->SetBinLabel(i+1,binLabels[i].c_str());
   }
-
+  //Saves all histograms to a specific file location specified above 
   f->cd();
   for(int i=0; i<4; i++){
     EEC_hist[i]->Write();
