@@ -1,7 +1,9 @@
 void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decayOn = false, bool MPIon = true, int nEvents = 1, string outDir = "")
 {
+  //list of different flavors of leading parton that we will be looking for
     string partSpeciesNames[4] = {"Gluon","Light Flavor","Charm","Bottom"};
-
+  
+  //Set all of the style preferences and the matricies of parameters specified within the file name and the inputted values by the user
   gStyle->SetOptStat(0);
   gStyle->SetOptFit(0);
     double globalmin = 0.013581;
@@ -13,10 +15,12 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     int min_pT[8] = {10, 20, 30, 40, 60, 100, 150, 500};
     int max_pT[8] = {20, 30, 40, 60, 100, 150, 200, 550};
     int pTmidrange[4] = {15, 25, 35, 50};
+    //Hard coded limits on ranges for plots, change these if looking at different pT ranges or collision energies as needed.
     double slopeMinRange[2] = {-1.6, -2.5};
     double slopeMaxRange[2] = {-0.3, -0.3};
     double peakMinRange[2] = {0, 0};
     double peakMaxRange[2] = {0.55, 0.4};
+    //Allows for comparisons of both 0.4 and 0.8 radius jets.
     int radiusIndex = -1;
     if (jetRadius == 0.4)
     {
@@ -30,12 +34,13 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     //Set all of the fitting values
 
     //Light Quarks
+    //Fitting minimums for the power law fit to the EECs
     double lminl[2][4] = {{0.6, 0.5, 0.3 ,0.25}, {0.325, 0.35, 0.3101, 0.3075}};
-
+    //Fitting maximums for the power law fit to the EECs
     double lmaxl[2][4] = {{0.75, 0.75, 0.75, 0.75}, {0.425, 0.425, 0.455, 0.425}};
-
+    //Fitting minimums for the gaussian fit to the EECs
     double lming[2][4] = {{0.1, 0.08, 0.05, 0.045}, {0.11, 0.07, 0.05, 0.04}};
-
+    //Fitting maximums for the gaussian fit to the EECs
     double lmaxg[2][4] = {{0.275, 0.2, 0.125, 0.1}, {0.23, 0.14, 0.1, 0.09}};
 
     //Charm Quarks
@@ -73,35 +78,13 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
 
     int pTHatIndex = -1;
     string histlist[7] = {"eec5", "eec15", "eec 25", "eec 35", "eec45", "eec80", "eec125"};
-    /*switch(pTHat){
-      case 5:
-        pTHatIndex = 0;
-        std::cout<<"Valid pTHat 5 inputted. Nice Job!!";
-        break;
-      case 15:
-        pTHatIndex = 1;
-        std::cout<<"Valid pTHat 15 inputted. Nice Job!!";
-        break;
-      case 25:
-        pTHatIndex = 2;
-        std::cout<<"Valid pTHat 25 inputted. Nice Job!!";
-        break;
-      case 35:
-        pTHatIndex = 3;
-        std::cout<<"Valid pTHat 35 inputted. Nice Job!!";
-        break;
-      case 450:
-        pTHatIndex = 4;
-        std::cout<<"Valid pTHat 450 inputted. Nice Job!!";
-        break;
-      default:
-        break;
-  
-    }*/
+    
 
     //Import the files from root locations
+    //Sets different bins for different pT ranges
     double bins[5] = {10, 20, 30, 40, 60};
     double badbins[4] = {20,30,40,60};
+    //Creates the histograms to be filled with the slope of the power law fits and the peaks of the gaussian fit
     TH1D *slopeHist[4];
     TH1D *peakHist[4];
     TCanvas *c1_final[4];
@@ -110,6 +93,8 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     TCanvas *ratio[4];
     //TCanvas *WTA[4];
     //TCanvas *BMeson[4];
+
+    //Creates the histograms for the slopes and peaks to be recorded.
   for (int i = 0; i<4; i++)
   {
     slopeHist[i] = new TH1D(Form("slopeHist_%s",partSpeciesNames[i].c_str()), Form("Slope Histogram %s;p_{T}^{Jet};Slope",partSpeciesNames[i].c_str()), 3, badbins);
@@ -121,16 +106,22 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     peakHist[i]->SetMarkerColor(color[i]);
     peakHist[i]->SetLineColor(color[i]);
   }
+  //Manually sets the canvas up for holding all 4 pT ranges in a 2x2 grid.
   TCanvas *cAll4 = new TCanvas("cAll4","cAll4",1600,1600);
   cAll4->cd()->SetTopMargin(0.15);
   cAll4->Divide(2,2,0.001,0.0);
+  //loops through all 4 pT ranges that I looked at
   for (int i=0; i<4; i++)
   {
     //double peaks[4] = {0};
+
+    //Pulls the file from where the user specified
     eec[i] = new TFile(Form("/data/rke_group/millsh1/pp/%s/FJEEC_noEdgeEffects_eCM%d_jetRadius%.1f_pTHat%d_decays%s_MPI%s_n%dk_all.root",outDir.c_str(),ECM,jetRadius,pTHat[i],(decayOn ? "On" : "Off"),(MPIon ? "On" : "Off"),nEvents), "READ");
     //Meson[i] = new TCanvas(Form("Meson%d",i), Form("Meson_%d",i));
     //WTA[i] =  new TCanvas(Form("WTA%d",i), Form("WTA_%d",i));
     //BMeson[i] =  new TCanvas(Form("B Meson%d",i), Form("B Meson%d",i));
+
+    //Creates the individual canvases for each pT range
     c1_final[i] = new TCanvas(Form("c1_final%d",i), Form("Combined Canvas %d", (i+1)));
     c1_final[i]->cd();
     gPad->SetTickx(2);
@@ -177,7 +168,8 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     gh->SetMarkerColor(color[0]);
     TH1D *ghclone = (TH1D*)gh->Clone("ghclone");
     */
-
+    
+    //Fits the perturbative region of the EEC with a power law fit (looks linear when plotted in log space)
     TF1 *ll = new TF1("ll", "[0]*pow(10.0,[1]*log10(x))", lminl[radiusIndex][i], lmaxl[radiusIndex][i]);
     ll->SetNpx(10000);
     ll->SetLineColor(color[1]-2);
@@ -185,6 +177,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     //ll->SetLineStyle(9);
     ll->SetLineWidth(3);
 
+    //Does the same for the charm initiated jet EEC
     TF1 *cl = new TF1("cl", "[0]*pow(10.0,[1]*log10(x))", cminl[radiusIndex][i], cmaxl[radiusIndex][i]);
     cl->SetNpx(10000);
     cl->SetLineColor(kOrange);
@@ -192,7 +185,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     //cl->SetLineStyle(9);
     cl->SetLineWidth(3);
 
-
+    //Same for Bottom
     TF1 *bl = new TF1("bl", "[0]*pow(10.0,[1]*log10(x))", bminl[radiusIndex][i], bmaxl[radiusIndex][i]);
     bl->SetNpx(10000);
     bl->SetLineColor(870);
@@ -203,8 +196,10 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
 
     //TF1 *gl = new TF1("gl", "[0]*pow(10.0,[1]*log10(x))", gminl[radiusIndex][i], gmaxl[radiusIndex][i]);
     //gl->SetLineColor(897);
-
     //TF1 *lgauss = new TF1("lgauss","[0]*exp(-0.5*pow(log(x-[1])/[2],2))", 0.03, 0.1);
+
+
+    //Plots the gaussian fits for the EEC transisition region 
     TF1 *lgauss = new TF1("lgauss","gaus", lming[radiusIndex][i], lmaxg[radiusIndex][i]);
     lgauss->SetNpx(10000);
     lgauss->SetLineColor(color[1] + 2);
@@ -248,6 +243,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     lh->GetXaxis()->CenterTitle(true);
     lh->GetYaxis()->CenterTitle(true);
 
+    //Begins scaling the histograms to all fit on the same plot 
     lh->Scale( 1.0, "width");
     ch->Scale( 1.0, "width");
     bh->Scale( 1.0, "width");
@@ -255,6 +251,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     //gh->Scale( 1.0, "width");
 
 
+    //Sends the labels for the individual plots into the stratosphere so that there are not extra labels when the 4x4 grid is plotted.
     if (i == 0)
     {
       lh->GetXaxis()->SetLabelOffset(999);
@@ -284,7 +281,10 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     //c2->cd();
     //c2->Update();
     //c2->Draw();
-    //Set the scaling to line up the graphs
+
+
+    //Set the scaling to line up the graphs so that they are all the same in the free hardon region
+
     double lNorm = lh->Integral(lh->FindBin(2e-3),lh->FindBin(2e-2));
     double cNorm = ch->Integral(ch->FindBin(2e-3),ch->FindBin(2e-2));
     double bNorm = bh->Integral(bh->FindBin(2e-3),bh->FindBin(2e-2));
@@ -314,7 +314,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     */
     }
 
-    //Fit the peaks
+    //Add the peaks from the gaussian fits to the EEC plot
     lh->Fit(lgauss, "R0", "", lming[radiusIndex][i], lmaxg[radiusIndex][i]);
     peakHist[1]->Fill(pTmidrange[i], lgauss->GetParameter(1));
     peakHist[1]->SetBinError(i+1, lgauss->GetParError(1));
@@ -332,6 +332,8 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     ch->Scale(1./ch->Integral());
     bh->Scale(1./bh->Integral());
     */
+
+    //Automatically find the maximum for each plot (used when each of the 4 pT plots were plotted seperately).
     double max=lh->GetMaximum();
     if(ch->GetMaximum() > max)
     {
@@ -348,6 +350,8 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
         max = gh->GetMaximum();
     }*/
 
+
+    //Does the same thing that was done for the Max for the min
     double min=1e10;
     for (int i = 1; i <= lh->GetNbinsX();i++)
     {
@@ -376,6 +380,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     {
         min = 0.001;
     }
+    //Sets the user ranges to all be the same to fit when plotted 2x2
     lh->GetYaxis()->SetRangeUser(globalmin,1.25 * globalmax);
     lh->GetXaxis()->SetRangeUser(0.01,0.4);
     std::cout<<min<<"   ;)   "<<max<<"\n";
@@ -438,11 +443,13 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     gPad->SetTickx(2);
     gPad->SetTicky(2);
 
+    //Organizes the plots in a 2x2 grid for final presentation
     if(i==1 || i== 3) cAll4->cd(i+1)->SetRightMargin(0.01);
     //if(i==0 || i== 2) cAll4->cd(i+1)->SetLeftMargin(0.06);
     if(i==0 || i==1) cAll4->cd(i+1)->SetTopMargin(0.04);
     if(i==2 || i==3) cAll4->cd(i+1)->SetBottomMargin(0.175);
 
+    //Creates the labels for the final 2x2 plot
     if(i==0 || i==2)
     {
       lh->GetYaxis()->SetTitleSize(0.06);
@@ -456,6 +463,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     }
 
 
+    //Draws all of the EECs and their various fits with the parameters specified above.
     lh->Draw("p");
     ch->Draw("psame");
     bh->Draw("psame");
@@ -476,7 +484,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     pTAll->SetFillStyle(0);
     pTAll->Draw();
 
-
+    //Adds the correct legends to the 2x2 plots
     if(i==0)
     {
       TLegend *lLeg = new TLegend(0.0175, 0.0175, 0.04, 0.07,"","br");
@@ -503,6 +511,8 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
       bLeg->AddEntry(bgauss, "Bottom Transition Region Fit","l");
       bLeg->Draw("same");
     }
+
+    //The next section is B Meson stuff that we kind of got working that would be cool to continue researching if you feel so inclined
 
     /*BMeson[i]->cd();
     bhMeson->Draw("P");
@@ -629,7 +639,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     //||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
   }
-
+  //Sets the 2x2 plot as current and adds a title (specifically for STS purposes)
   cAll4->cd();
   TPaveText *cAll4Title = new TPaveText(0.05,0.925,0.95,0.98, "NDC");
   cAll4Title->SetFillStyle(0);
@@ -645,6 +655,8 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     TCanvas *slope = new TCanvas("slope", "Slopes");
     gPad->SetTickx(2);
     gPad->SetTicky(2);
+
+    //Automatically sets the mins and maxes for the Slope from the perturbative region power law fits histograms
     double max=slopeHist[1]->GetMaximum();
     if(slopeHist[2]->GetMaximum() > max)
     {
@@ -710,6 +722,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
 
     slope->SaveAs(Form("/data/rke_group/millsh1/pp/%s/FJEECComp_noEdgeEffects_Slope_eCM%d_jetRadius%.1f_pTHat_all_decays%s_MPI%s_n%dk.pdf",outDir.c_str(),ECM,jetRadius,(decayOn ? "On" : "Off"),(MPIon ? "On" : "Off"),nEvents));
 
+    //Sets the minimum and maxiumum viewing range automatically to include all of the data points.
     max=peakHist[0]->GetMaximum();
     if(peakHist[1]->GetMaximum() > max)
     {
@@ -756,11 +769,13 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     peakHist[0]->SetTitle("");
     peakHist[0]->GetXaxis()->CenterTitle(true);
     peakHist[0]->GetYaxis()->CenterTitle(true);
+    //Draws all of the peak histograms for each flavor
     for(int i=0; i<4; i++)
     {
       if(i==0) peakHist[i]->Draw("p");
       else peakHist[i]->Draw("psame");
     }
+    //Plots the Text for the Gaussian fits peaks histogram
     TPaveText *ptext = new TPaveText(0.325, 0.675, 0.625, 0.875, "NDC");
     ptext->AddText(Form("PYTHIA-8 pp #sqrt{s} = %d GeV",ECM));
     ptext->AddText(Form("Anti-k_{T} R = %.1f", jetRadius));
@@ -768,6 +783,7 @@ void draw_E2C_High_Energy_Bjet(int ECM = 200, double jetRadius = 0.4, bool decay
     ptext->SetBorderSize(0);
     ptext->SetFillStyle(0);
     ptext->Draw();
+    //Plots the legend for the gaussian fit peaks histogram
     TLegend *pleg = new TLegend(0.625, 0.6625, 0.875, 0.8875);
     pleg->AddEntry(peakHist[1], "Light Flavor","p");
     pleg->AddEntry(peakHist[2], "Charm","p");
